@@ -1,0 +1,30 @@
+{
+  "variables": [
+    "feed",
+    "pressure",
+    "temperature",
+    "defect_rate"
+  ],
+  "stages": [
+    0,
+    1,
+    1,
+    2
+  ],
+  "outcome": "defect_rate",
+  "outcome_limit": 0.05,
+  "measurement_sd": [
+    0.01,
+    0.02,
+    0.05,
+    0.005
+  ],
+  "actions": {
+    "feed": {
+      "lower": 0.2,
+      "upper": 0.8,
+      "cost": 1,
+      "effect_source": ""
+    }
+  }
+}
