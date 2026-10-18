@@ -53,6 +53,38 @@ class FuzzyMechanism:
         return endpoints
 
 
+    def interval(self, lower, upper):
+        """Enclose a fuzzy mechanism over the complete parent box."""
+        lower, upper = np.asarray(lower), np.asarray(upper)
+        farthest = np.maximum(np.abs(lower - self.centers), np.abs(upper - self.centers))
+        nearest = np.maximum(np.maximum(lower - self.centers, self.centers - upper), 0)
+        narrow = self.sigma * np.exp(-self.sensor_sd / self.sigma)
+        wide = self.sigma * np.exp(self.sensor_sd / self.sigma)
+        grade_lo = np.exp(-.5 * ((farthest / narrow) ** 2).sum(-1)).clip(1e-30)
+        grade_hi = np.exp(-.5 * ((nearest / wide) ** 2).sum(-1)).clip(1e-30)
+        consequence_lo, consequence_hi = [], []
+        for model in self.models:
+            coefficient = model.coef_[:-1]
+            offset = model.intercept_ + model.coef_[-1]
+            consequence_lo.append(offset + np.minimum(coefficient * lower, coefficient * upper).sum())
+            consequence_hi.append(offset + np.maximum(coefficient * lower, coefficient * upper).sum())
+        endpoints = []
+        for values, left in ((consequence_lo, True), (consequence_hi, False)):
+            order = np.argsort(values)
+            values = np.asarray(values)[order]
+            lo, hi = grade_lo[order], grade_hi[order]
+            estimate = float(values.mean())
+            for _ in range(100):
+                weights = np.where(values <= estimate, hi if left else lo, lo if left else hi)
+                updated = float(weights @ values / weights.sum())
+                if abs(updated - estimate) < 1e-10:
+                    estimate = updated
+                    break
+                estimate = updated
+            endpoints.append(estimate + (-self.residual if left else self.residual))
+        return np.nextafter(endpoints[0], -np.inf), np.nextafter(endpoints[1], np.inf)
+
+
 def fit(frame, spec, args):
     names = spec["variables"]
     train = frame[frame.split == "train"]
@@ -98,11 +130,12 @@ def propagate(bundle, factual, do, args, perturbation=0.):
             parents, model = mechanism
             factual_prediction = model.predict(factual[parents][None])[0]
             residual = factual[j] - factual_prediction + perturbation
-            samples = np.stack([low[parents], high[parents], (low[parents] + high[parents]) / 2])
-            left, right = model.endpoints(samples)
-            low[j], high[j] = left.min() + residual, right.max() + residual
+            parent_low, parent_high = low[parents].copy(), high[parents].copy()
+            left, right = model.interval(parent_low, parent_high)
+            low[j], high[j] = left + residual, right + residual
             if args.variant == "point":
-                low[j] = high[j] = model.predict(samples[2:])[0] + residual
+                midpoint = ((parent_low + parent_high) / 2)[None]
+                low[j] = high[j] = model.predict(midpoint)[0] + residual
         states.append(np.stack([low, high]))
     return np.stack(states)
 

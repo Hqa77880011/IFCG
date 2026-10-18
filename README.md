@@ -53,3 +53,7 @@ Add the same intervention and truth-graph arguments to every controlled causal c
 ## Modeling conventions
 
 Stage order guarantees acyclicity before fitting. Lasso supplies sparse parent sets in each bootstrap graph; compact Gaussian Takagi–Sugeno mechanisms then fit nonlinear local responses by weighted ridge regression. Sensor uncertainty widens antecedent grades, and 90th-percentile normal mechanism residuals widen consequents. Endpoint-switch type reduction and low/mid/high parent sampling propagate intervals. Structural variation remains explicit rather than collapsing into one graph. Candidate normalization uses the training median and abducted factual residuals. Hidden-confounding perturbation is a sensitivity scenario, not a procedure that identifies unrestricted latent confounding. An effect-source declaration and bounded support are required for recommendations; observational ranking alone does not establish an actionable intervention.
+
+## Reproduction logic conventions
+
+Interval propagation encloses the complete parent box. Gaussian firing-grade bounds use the nearest/farthest distance to that box, affine consequents use coefficient-sign interval bounds, and type reduction combines these bounds. Mixed-sign parent effects are not approximated by only the all-low/all-high corners.
